@@ -1,0 +1,45 @@
+.upload-drop-zone {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  background: #fafafa;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.upload-drop-zone.drag-over {
+  border-color: #007aff;
+  background: #f0f7ff;
+}
+
+.upload-drop-zone.uploading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-drop-zone label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.upload-drop-zone .icon {
+  font-size: 32px;
+  display: block;
+}
+
+.upload-drop-zone p {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.upload-drop-zone .hint {
+  font-size: 12px;
+  color: #999;
+  font-weight: normal;
+}

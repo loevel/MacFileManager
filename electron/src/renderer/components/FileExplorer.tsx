@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '../store';
 import { Breadcrumb } from './Breadcrumb';
 import { FileList } from './FileList';
+import { UploadDropZone } from './UploadDropZone';
+import { ConfirmDialog } from './ConfirmDialog';
 import '../styles/FileExplorer.css';
 
 interface FileEntry {
@@ -15,8 +17,11 @@ interface FileEntry {
 }
 
 export function FileExplorer() {
+  const queryClient = useQueryClient();
   const { serverUrl, currentPath, setCurrentPath } = useStore();
   const [selectedFile, setSelectedFile] = useState<FileEntry | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<FileEntry | null>(null);
 
   const { data: files, isLoading, error } = useQuery({
     queryKey: ['files', serverUrl, currentPath],
@@ -55,6 +60,60 @@ export function FileExplorer() {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
+  const handleUpload = async (filesToUpload: File[]) => {
+    if (!serverUrl) return;
+
+    setIsUploading(true);
+    try {
+      for (const file of filesToUpload) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const params = new URLSearchParams({ path: currentPath });
+        const res = await fetch(`${serverUrl}/api/upload?${params}`, {
+          method: 'POST',
+          body: formData,
+          mode: 'cors',
+        });
+
+        if (!res.ok) {
+          const json = await res.json();
+          throw new Error(json.error || 'Upload failed');
+        }
+      }
+      // Refresh file list after upload
+      queryClient.invalidateQueries({ queryKey: ['files', serverUrl, currentPath] });
+    } catch (err) {
+      alert(`Upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!serverUrl || !deleteTarget) return;
+
+    try {
+      const params = new URLSearchParams({ path: deleteTarget.path });
+      const res = await fetch(`${serverUrl}/api/files?${params}`, {
+        method: 'DELETE',
+        mode: 'cors',
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || 'Delete failed');
+      }
+
+      setDeleteTarget(null);
+      setSelectedFile(null);
+      // Refresh file list after delete
+      queryClient.invalidateQueries({ queryKey: ['files', serverUrl, currentPath] });
+    } catch (err) {
+      alert(`Delete failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
   return (
     <div className="file-explorer">
       <div className="explorer-header">
@@ -73,6 +132,10 @@ export function FileExplorer() {
             <span className="file-count">
               {files?.length || 0} items
             </span>
+          </div>
+
+          <div className="upload-section">
+            <UploadDropZone onFilesSelected={handleUpload} isUploading={isUploading} />
           </div>
 
           {isLoading && <p className="loading">Loading...</p>}
@@ -112,12 +175,28 @@ export function FileExplorer() {
               </div>
               <div className="actions">
                 <button className="btn-download">⬇️ Download</button>
-                <button className="btn-delete">🗑️ Delete</button>
+                <button
+                  className="btn-delete"
+                  onClick={() => setDeleteTarget(selectedFile)}
+                >
+                  🗑️ Delete
+                </button>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete File"
+          message={`Are you sure you want to delete "${deleteTarget.name.replace(/^[^\s]+ /, '')}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }

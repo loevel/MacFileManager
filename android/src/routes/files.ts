@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import multer from 'multer';
 
 const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -244,6 +245,79 @@ router.delete('/files', async (req: Request, res: Response<ApiResponse<null>>) =
     res.json({
       status: 'success',
       data: null,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      error: err instanceof Error ? err.message : 'Unknown error',
+    });
+  }
+});
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 * 1024, // 5 GB
+  },
+});
+
+interface UploadedFile extends Express.Multer.File {
+  buffer: Buffer;
+}
+
+// POST /api/upload - Upload a file
+router.post('/upload', upload.single('file'), async (req: Request, res: Response<ApiResponse<FileEntry>>) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        status: 'error',
+        error: 'No file provided',
+      });
+    }
+
+    let targetDir = (req.query.path as string) || '';
+
+    // Resolve target directory
+    let targetPath = path.join(BASE_PATHS.documents, targetDir);
+
+    // Security: prevent directory traversal
+    const realTargetPath = await fs.realpath(BASE_PATHS.documents).catch(() => BASE_PATHS.documents);
+    const resolvedTargetPath = path.resolve(targetPath);
+    if (!resolvedTargetPath.startsWith(realTargetPath)) {
+      return res.status(403).json({
+        status: 'error',
+        error: 'Access denied',
+      });
+    }
+
+    // Ensure directory exists
+    await fs.mkdir(resolvedTargetPath, { recursive: true });
+
+    // Sanitize filename
+    const filename = path.basename(req.file.originalname);
+    const filePath = path.join(resolvedTargetPath, filename);
+
+    // Write file
+    const file = req.file as UploadedFile;
+    await fs.writeFile(filePath, file.buffer);
+
+    // Get file stats for response
+    const stat = await fs.stat(filePath);
+    const relativePath = path.relative(BASE_PATHS.documents, filePath);
+
+    const uploadedFile: FileEntry = {
+      name: `📄 ${filename}`,
+      path: relativePath,
+      size: stat.size,
+      isDirectory: false,
+      mimeType: req.file.mimetype,
+      modified: stat.mtime.getTime(),
+    };
+
+    res.json({
+      status: 'success',
+      data: uploadedFile,
     });
   } catch (err) {
     res.status(500).json({
