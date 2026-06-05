@@ -1,7 +1,10 @@
 .file-list {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px 0;
+  /* Enable GPU acceleration for smooth scrolling */
+  will-change: transform;
 }
 
 .file-item {
