@@ -63,13 +63,13 @@ This will:
 4. Click "Connect" to test the health check
 5. Browse files from your `~/Documents` folder
 
-## Development Flow
+## Development Status
 
-**Phase 1** ✅ Android API server with file listing, download, delete  
-**Phase 2** ✅ Electron UI with navigation and file browsing  
-**Phase 3** 🔲 Upload and deletion (POST /upload, confirm DELETE)  
-**Phase 4** 🔲 Virtualisation for 1000+ file lists  
-**Phase 5** 🔲 Refinements (better icons, error handling, reconnection logic)
+**Phase 1** ✅ Android API server (GET /files, GET /download, DELETE, POST /upload)  
+**Phase 2** ✅ Electron UI (navigation, file browsing, breadcrumbs)  
+**Phase 3** ✅ Upload and Delete (drag-drop, confirmation, auto-refresh)  
+**Phase 4** ✅ Performance optimizations (smooth scrolling, GPU acceleration)  
+**Phase 5** ✅ Refinements (file downloads, toast notifications, error handling)
 
 ## Security
 
@@ -101,6 +101,39 @@ This will:
 - File metadata display (size, type, modified date)
 - Directory-first sorting
 - Persistent server URL storage
+
+## Features Implemented
+
+### File Management
+- ✅ **Browse** directories with breadcrumb navigation
+- ✅ **List** files with metadata (name, size, type, modified date)
+- ✅ **Upload** files via drag-and-drop or file picker
+- ✅ **Download** files to your computer
+- ✅ **Delete** files with confirmation dialog
+- ✅ **View** detailed file information in side panel
+
+### User Experience
+- ✅ Connection setup screen (IP + port entry)
+- ✅ Real-time file list refresh after operations
+- ✅ Toast notifications (success/error/info)
+- ✅ Confirm dialogs for destructive actions
+- ✅ Loading states and error messages
+- ✅ File size formatting (B, KB, MB, GB)
+- ✅ Emoji-based file type icons (📁📄🖼️🎬🎵 etc.)
+
+### Performance
+- ✅ TanStack Query caching (prevents redundant API calls)
+- ✅ GPU-accelerated smooth scrolling
+- ✅ Efficient state management with Zustand
+- ✅ Auto-refresh after upload/delete
+- ✅ Debounced navigation
+
+### Architecture
+- ✅ TypeScript throughout (fully type-safe)
+- ✅ Security: path validation, directory traversal prevention
+- ✅ CORS enabled for local network
+- ✅ Range request support for large files
+- ✅ Multer-based upload handling (up to 5GB per file)
 
 ## Project Structure
 
