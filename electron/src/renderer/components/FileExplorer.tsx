@@ -5,6 +5,7 @@ import { Breadcrumb } from './Breadcrumb';
 import { FileList } from './FileList';
 import { UploadDropZone } from './UploadDropZone';
 import { ConfirmDialog } from './ConfirmDialog';
+import { ToastContainer, useToasts, addToast } from './Toast';
 import '../styles/FileExplorer.css';
 
 interface FileEntry {
@@ -22,6 +23,7 @@ export function FileExplorer() {
   const [selectedFile, setSelectedFile] = useState<FileEntry | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<FileEntry | null>(null);
+  const toasts = useToasts();
 
   const { data: files, isLoading, error } = useQuery({
     queryKey: ['files', serverUrl, currentPath],
@@ -83,8 +85,12 @@ export function FileExplorer() {
       }
       // Refresh file list after upload
       queryClient.invalidateQueries({ queryKey: ['files', serverUrl, currentPath] });
+      addToast('Files uploaded successfully', 'success');
     } catch (err) {
-      alert(`Upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      addToast(
+        `Upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'error'
+      );
     } finally {
       setIsUploading(false);
     }
@@ -109,8 +115,44 @@ export function FileExplorer() {
       setSelectedFile(null);
       // Refresh file list after delete
       queryClient.invalidateQueries({ queryKey: ['files', serverUrl, currentPath] });
+      addToast('File deleted successfully', 'success');
     } catch (err) {
-      alert(`Delete failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      addToast(
+        `Delete failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'error'
+      );
+    }
+  };
+
+  const handleDownload = async (file: FileEntry) => {
+    if (!serverUrl) return;
+
+    try {
+      const params = new URLSearchParams({ path: file.path });
+      const res = await fetch(`${serverUrl}/api/download?${params}`, {
+        mode: 'cors',
+      });
+
+      if (!res.ok) {
+        throw new Error('Download failed');
+      }
+
+      // Create blob and download
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name.replace(/^[^\s]+ /, ''); // Remove emoji prefix
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      addToast('Download started', 'success');
+    } catch (err) {
+      addToast(
+        `Download failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'error'
+      );
     }
   };
 
@@ -174,7 +216,12 @@ export function FileExplorer() {
                 </span>
               </div>
               <div className="actions">
-                <button className="btn-download">⬇️ Download</button>
+                <button
+                  className="btn-download"
+                  onClick={() => handleDownload(selectedFile)}
+                >
+                  ⬇️ Download
+                </button>
                 <button
                   className="btn-delete"
                   onClick={() => setDeleteTarget(selectedFile)}
@@ -197,6 +244,8 @@ export function FileExplorer() {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
+
+      <ToastContainer toasts={toasts} />
     </div>
   );
 }
